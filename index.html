@@ -1,14 +1,1809 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Website</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapping Indigenous Waterways & Land Loss in Illinois (1800–1840)</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Typography: Academic Serif & Clean Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       Design System: Scholarly & Restrained Digital Humanities Aesthetic
+       ========================================================================== */
+    :root {
+      --bg-page: #f5f3ef;
+      --surface: #ffffff;
+      --surface-subtle: #f9f8f6;
+      --border: #dcd7ce;
+      --border-dark: #b8b1a5;
+      
+      --text-primary: #1c1917;
+      --text-secondary: #524e47;
+      --text-muted: #78736a;
+      
+      --color-river: #1b75bb;
+      --color-corridor: #2e7d32;
+      --color-corridor-fill: rgba(46, 125, 50, 0.16);
+      --color-treaty: #b91c1c;
+      --color-treaty-fill: rgba(185, 28, 28, 0.20);
+      --color-marker: #881337;
+      
+      --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.10);
+      --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.14);
+      
+      --radius-sm: 3px;
+      --radius-md: 6px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+      background-color: var(--bg-page);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Map Canvas */
+    #map {
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      background-color: #e9e6df;
+    }
+
+    /* Leaflet Controls Customization */
+    .leaflet-control-zoom {
+      border: 1px solid var(--border) !important;
+      box-shadow: var(--shadow-sm) !important;
+      border-radius: var(--radius-sm) !important;
+      overflow: hidden;
+      margin-left: 18px !important;
+      margin-top: 18px !important;
+    }
+    .leaflet-control-zoom a {
+      background-color: var(--surface) !important;
+      color: var(--text-primary) !important;
+      border-bottom-color: var(--border) !important;
+      font-size: 14px !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background-color: var(--surface-subtle) !important;
+      color: var(--color-marker) !important;
+    }
+    .leaflet-control-attribution {
+      background-color: rgba(255, 255, 255, 0.88) !important;
+      font-size: 10px !important;
+      color: var(--text-muted) !important;
+      padding: 2px 8px !important;
+    }
+
+    /* ==========================================================================
+       Left Control Panel (Academic Header, Basemap, Layers, Legend)
+       ========================================================================== */
+    .control-panel {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 1000;
+      width: 360px;
+      max-width: calc(100vw - 36px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .panel-title {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text-primary);
+      margin-bottom: 5px;
+    }
+    .panel-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn-action {
+      flex: 1;
+      padding: 6px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      color: var(--text-primary);
+      transition: background 0.15s, border-color 0.15s;
+      text-align: center;
+    }
+    .btn-action:hover {
+      background: #eeeae2;
+      border-color: var(--border-dark);
+    }
+    .btn-action.primary {
+      background: var(--text-primary);
+      color: #ffffff;
+      border-color: var(--text-primary);
+    }
+    .btn-action.primary:hover {
+      background: #332f2b;
+    }
+
+    .panel-body {
+      max-height: calc(100vh - 320px);
+      overflow-y: auto;
+      padding: 14px 20px 18px 20px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .panel-section-title {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-section-title:first-child {
+      margin-top: 0;
+    }
+
+    /* Segmented Basemap Switcher */
+    .segmented-control {
+      display: flex;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      margin-bottom: 12px;
+    }
+    .segment-btn {
+      flex: 1;
+      padding: 5px 8px;
+      font-size: 11.5px;
+      font-weight: 500;
+      font-family: var(--font-sans);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .segment-btn.active {
+      background: var(--surface);
+      color: var(--text-primary);
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Layer Items */
+    .layer-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .layer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 9px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .layer-row:hover {
+      background: #f1ede5;
+    }
+    .layer-main {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .layer-checkbox {
+      width: 14px;
+      height: 14px;
+      accent-color: var(--color-marker);
+      cursor: pointer;
+    }
+    .layer-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .layer-count-badge {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Key */
+    .legend-container {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .legend-symbol {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .symbol-line {
+      width: 18px;
+      height: 3px;
+      background: var(--color-river);
+      border-radius: 1px;
+    }
+    .symbol-corridor {
+      width: 18px;
+      height: 11px;
+      background: var(--color-corridor-fill);
+      border: 1.5px dashed var(--color-corridor);
+      border-radius: 2px;
+    }
+    .symbol-treaty {
+      width: 18px;
+      height: 11px;
+      background: var(--color-treaty-fill);
+      border: 1.5px solid var(--color-treaty);
+      border-radius: 2px;
+    }
+    .symbol-marker {
+      width: 12px;
+      height: 12px;
+      background: var(--color-marker);
+      border: 1.5px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px var(--color-marker);
+    }
+    .legend-text {
+      font-size: 11.5px;
+      color: var(--text-primary);
+    }
+
+    /* ==========================================================================
+       Bottom Timeline Controls
+       ========================================================================== */
+    .timeline-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      width: min(800px, calc(100vw - 36px));
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      padding: 14px 20px 12px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .timeline-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .playback-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-step {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--text-primary);
+      transition: background 0.15s;
+    }
+    .btn-step:hover {
+      background: #eae5dc;
+    }
+    .btn-play {
+      padding: 0 12px;
+      height: 30px;
+      border: 1px solid var(--text-primary);
+      background: var(--text-primary);
+      color: #ffffff;
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s;
+    }
+    .btn-play:hover {
+      background: #332f2b;
+    }
+
+    .year-indicator {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .year-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+    .year-number {
+      font-family: var(--font-serif);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--color-marker);
+      line-height: 1;
+      min-width: 60px;
+    }
+
+    .timeline-metrics {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 5px 12px;
+    }
+    .timeline-metrics strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Slider & Ticks */
+    .slider-track-wrap {
+      width: 100%;
+      position: relative;
+    }
+    .timeline-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #d8d3c8;
+      outline: none;
+      cursor: pointer;
+    }
+    .timeline-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-marker);
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      cursor: grab;
+      transition: transform 0.1s;
+    }
+    .timeline-range::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .timeline-range::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--color-marker);
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      cursor: grab;
+    }
+
+    .ticks-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      user-select: none;
+    }
+    .tick-item {
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .tick-item:hover {
+      color: var(--color-marker);
+    }
+    .tick-item.milestone {
+      font-weight: 600;
+    }
+    .tick-item.active {
+      color: var(--color-marker);
+      font-weight: 700;
+    }
+
+    /* ==========================================================================
+       Right Slide-out Drawer (Scholarly Context & Site Analysis)
+       ========================================================================== */
+    .narrative-drawer {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      bottom: 20px;
+      width: 420px;
+      max-width: calc(100vw - 36px);
+      z-index: 1000;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(calc(100% + 30px));
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+    .narrative-drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-top {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      background: var(--surface);
+    }
+    .btn-close {
+      background: transparent;
+      border: none;
+      font-size: 18px;
+      line-height: 1;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: var(--radius-sm);
+    }
+    .btn-close:hover {
+      color: var(--text-primary);
+      background: var(--surface-subtle);
+    }
+
+    .drawer-scroll-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .drawer-heading {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text-primary);
+      margin-top: 3px;
+    }
+
+    .meta-tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .meta-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+    }
+    .meta-tag.highlight {
+      background: #fdf2f2;
+      border-color: #fca5a5;
+      color: #991b1b;
+      font-weight: 600;
+    }
+
+    .drawer-body-text {
+      font-family: var(--font-serif);
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: #2e2a25;
+    }
+
+    .analysis-callout {
+      background: var(--surface-subtle);
+      border-left: 3px solid var(--color-treaty);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .analysis-callout h4 {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--color-treaty);
+      margin-bottom: 4px;
+    }
+
+    .primary-quote {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: #44403c;
+      padding: 10px 14px;
+      background: #fbfaf8;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .primary-quote cite {
+      display: block;
+      margin-top: 6px;
+      font-style: normal;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .drawer-actions-row {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Side button to reopen drawer when closed */
+    .btn-reopen-drawer {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      z-index: 990;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      border-radius: var(--radius-sm);
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-reopen-drawer:hover {
+      background: var(--surface-subtle);
+    }
+
+    /* ==========================================================================
+       Theoretical Framework Modal
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-dialog {
+      width: min(640px, 100%);
+      max-height: 85vh;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header-bar {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface-subtle);
+    }
+    .modal-headline {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .modal-body-scroll {
+      padding: 22px;
+      overflow-y: auto;
+      font-family: var(--font-serif);
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: #2b2721;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .modal-body-scroll h3 {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--color-marker);
+      margin-top: 6px;
+    }
+    .modal-body-scroll blockquote {
+      border-left: 3px solid var(--border-dark);
+      padding-left: 12px;
+      font-style: italic;
+      color: #555045;
+    }
+    .modal-body-scroll ul {
+      padding-left: 20px;
+    }
+    .modal-body-scroll li {
+      margin-bottom: 5px;
+    }
+    .modal-footer-bar {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-subtle);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* Map Node Station Pin */
+    .node-pin-wrap {
+      background: none;
+      border: none;
+    }
+    .node-pin {
+      width: 22px;
+      height: 22px;
+      background: var(--color-marker);
+      border: 1.5px solid #ffffff;
+      border-radius: 50%;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-sans);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .node-pin:hover {
+      background: #9f1239;
+      transform: scale(1.15);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 860px) {
+      .control-panel {
+        width: 320px;
+        top: 12px;
+        left: 12px;
+      }
+      .timeline-panel {
+        width: calc(100vw - 24px);
+        bottom: 12px;
+        padding: 10px 14px;
+      }
+      .timeline-metrics {
+        display: none;
+      }
+      .narrative-drawer {
+        width: calc(100vw - 24px);
+        top: 12px;
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
 </head>
 <body>
 
-    <h1>Welcome to My Website</h1>
-    <p>This is a basic index.html template starter file.</p>
+  <!-- Map Container -->
+  <div id="map"></div>
 
+  <!-- Left Control Panel -->
+  <aside class="control-panel" id="controlPanel">
+    <div class="panel-header">
+      <h1 class="panel-title">Mapping Indigenous Waterways & Land Loss in Illinois</h1>
+      <p class="panel-subtitle">Contrasting dynamic riverine lifeways against 19th-century settler land treaties (1800–1840).</p>
+      
+      <div class="header-actions">
+        <button class="btn-action primary" id="openAboutBtn">About & Sources</button>
+        <button class="btn-action" id="resetViewBtn">Reset Extent</button>
+      </div>
+    </div>
+
+    <div class="panel-body">
+      <!-- Basemap Segmented Toggle -->
+      <div class="panel-section-title">
+        <span>Basemap</span>
+      </div>
+      <div class="segmented-control">
+        <button class="segment-btn active" id="btnBasemapLight">Light Gray</button>
+        <button class="segment-btn" id="btnBasemapShaded">Shaded Relief</button>
+      </div>
+
+      <!-- Layers Checklist -->
+      <div class="panel-section-title">
+        <span>Layers</span>
+        <span style="font-size: 10px; cursor: pointer; color: var(--color-marker); text-transform: none; font-weight: 600;" id="toggleAllLayers">Toggle All</span>
+      </div>
+
+      <div class="layer-list">
+        <label class="layer-row">
+          <div class="layer-main">
+            <input type="checkbox" class="layer-checkbox" id="toggleRivers" checked>
+            <div class="layer-swatch" style="background: var(--color-river);"></div>
+            <span>River Systems & Flowlines</span>
+          </div>
+          <span class="layer-count-badge">4 Rivers</span>
+        </label>
+
+        <label class="layer-row">
+          <div class="layer-main">
+            <input type="checkbox" class="layer-checkbox" id="toggleCorridors" checked>
+            <div class="layer-swatch" style="background: var(--color-corridor-fill); border: 1.5px dashed var(--color-corridor);"></div>
+            <span>Seasonal Indigenous Lifeways</span>
+          </div>
+          <span class="layer-count-badge">4 Corridors</span>
+        </label>
+
+        <label class="layer-row">
+          <div class="layer-main">
+            <input type="checkbox" class="layer-checkbox" id="toggleTreaties" checked>
+            <div class="layer-swatch" style="background: var(--color-treaty-fill); border: 1.5px solid var(--color-treaty);"></div>
+            <span>Settler Treaty Cessions</span>
+          </div>
+          <span class="layer-count-badge" id="activeTreatyCount">0 / 6</span>
+        </label>
+
+        <label class="layer-row">
+          <div class="layer-main">
+            <input type="checkbox" class="layer-checkbox" id="togglePoints" checked>
+            <div class="layer-swatch" style="background: var(--color-marker); border-radius: 50%;"></div>
+            <span>Historical Story Nodes</span>
+          </div>
+          <span class="layer-count-badge">6 Sites</span>
+        </label>
+      </div>
+
+      <!-- Key -->
+      <div class="panel-section-title">
+        <span>Key</span>
+      </div>
+
+      <div class="legend-container">
+        <div class="legend-item">
+          <div class="legend-symbol"><div class="symbol-line"></div></div>
+          <div class="legend-text">Waterways</div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-symbol"><div class="symbol-corridor"></div></div>
+          <div class="legend-text">Seasonal Lifeways</div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-symbol"><div class="symbol-treaty"></div></div>
+          <div class="legend-text">Treaty Cessions</div>
+        </div>
+
+        <div class="legend-item">
+          <div class="legend-symbol"><div class="symbol-marker"></div></div>
+          <div class="legend-text">Historical Sites</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom Timeline Bar -->
+  <div class="timeline-panel" id="timelinePanel">
+    <div class="timeline-top">
+      <div class="playback-group">
+        <button class="btn-step" id="prevTreatyBtn" title="Previous Treaty Milestone">◀</button>
+        <button class="btn-play" id="playBtn" title="Play / Pause Timeline">
+          <span id="playLabel">Play</span>
+        </button>
+        <button class="btn-step" id="nextTreatyBtn" title="Next Treaty Milestone">▶</button>
+      </div>
+
+      <div class="year-indicator">
+        <span class="year-title">Year</span>
+        <span class="year-number" id="yearVal">1800</span>
+      </div>
+
+      <div class="timeline-metrics">
+        <span>Ceded: <strong id="statAcres">0.0M</strong> acres (<strong id="statPercent">0%</strong>)</span>
+        <span>•</span>
+        <span><strong id="statTreatiesCount">0</strong> active treaties</span>
+      </div>
+    </div>
+
+    <div class="slider-track-wrap">
+      <input type="range" min="1800" max="1840" step="1" value="1800" class="timeline-range" id="yearSlider" aria-label="Year slider">
+      <div class="ticks-row" id="ticksRow">
+        <span class="tick-item active" data-year="1800">1800</span>
+        <span class="tick-item milestone" data-year="1803">1803</span>
+        <span class="tick-item" data-year="1810">1810</span>
+        <span class="tick-item milestone" data-year="1816">1816</span>
+        <span class="tick-item milestone" data-year="1819">1819</span>
+        <span class="tick-item" data-year="1825">1825</span>
+        <span class="tick-item milestone" data-year="1829">1829</span>
+        <span class="tick-item milestone" data-year="1832">1832</span>
+        <span class="tick-item milestone" data-year="1833">1833</span>
+        <span class="tick-item" data-year="1840">1840</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reopen Drawer Button -->
+  <button class="btn-reopen-drawer" id="openDrawerTab">
+    Historical Analysis
+  </button>
+
+  <!-- Right Slide-out Drawer -->
+  <aside class="narrative-drawer" id="narrativeDrawer">
+    <div class="drawer-top">
+      <button class="btn-close" id="closeDrawerBtn" title="Close Panel">✕</button>
+    </div>
+
+    <div class="drawer-scroll-body" id="drawerBody">
+      <!-- Populated via JavaScript -->
+    </div>
+
+    <div class="drawer-actions-row">
+      <button class="btn-action" id="drawerOverviewBtn">Overview</button>
+      <button class="btn-action primary" id="drawerFocusBtn">Zoom to Location</button>
+    </div>
+  </aside>
+
+  <!-- Sources & Theoretical Framework Modal -->
+  <div class="modal-backdrop" id="aboutModal">
+    <div class="modal-dialog">
+      <div class="modal-header-bar">
+        <h2 class="modal-headline">Sources & Methodology</h2>
+        <button class="btn-close" id="closeModalBtn">✕</button>
+      </div>
+
+      <div class="modal-body-scroll">
+        <h3>Counter-Mapping Methodology</h3>
+        <p>
+          As defined by political ecologist <strong>Nancy Lee Peluso (1995)</strong> and cartographic theorist <strong>Denis Wood (1992)</strong>, counter-mapping appropriates official spatial techniques to challenge dominant territorial narratives, reveal suppressed ecological connections, and contest legal structures of state dispossession.
+        </p>
+        <blockquote>
+          "Maps do not simply represent territory; they create and enforce property regimes. In nineteenth-century Illinois, the Public Land Survey System erased relational ecological landmarks to commodify the continent."
+        </blockquote>
+
+        <h3>Relational Waters vs. Rectilinear Grids</h3>
+        <p>
+          This exhibit contrasts two competing spatial ontologies:
+        </p>
+        <ul>
+          <li><strong>Indigenous Relational Space:</strong> Seasonal mobility structured by river depth, wild rice harvesting, spring fish runs, and autumn floodplain bison hunting. Territorially bounded through mutual agreements and obligations between sovereign peoples and living watersheds.</li>
+          <li><strong>Settler Cartesian Enclosure:</strong> The Jeffersonian Public Land Survey System (PLSS) enacted by the General Land Office, dividing land into 6-mile-square townships and 160-acre quarter sections indifferent to river contours.</li>
+        </ul>
+
+        <h3>Archival References</h3>
+        <ul>
+          <li><strong>Charles C. Royce (1899)</strong>, <em>Indian Land Cessions in the United States</em>, 18th Annual Report of the Bureau of American Ethnology (Cessions 44, 77, 110, 147, 175, 187).</li>
+          <li><strong>Charles J. Kappler (1904)</strong>, <em>Indian Affairs: Laws and Treaties</em>, Vol. II, Washington: Government Printing Office.</li>
+          <li><strong>Helen Hornbeck Tanner (1987)</strong>, <em>Atlas of Great Lakes Indian History</em>, University of Oklahoma Press.</li>
+          <li><strong>Black Hawk (1833)</strong>, <em>Autobiography of Ma-ka-tai-me-she-kia-kiak</em>, ed. J. B. Patterson.</li>
+        </ul>
+
+        <h3>Land Acknowledgment</h3>
+        <p>
+          The Illinois and Wabash River basins are the ancestral territories of the Peoria, Kaskaskia, Piankeshaw, Wea, Miami, Kickapoo, Potawatomi, Sauk, Meskwaki, Odawa, and Ojibwe nations. This application honors their continuing presence, sovereignty, and living ties to these lands and waterways.
+        </p>
+      </div>
+
+      <div class="modal-footer-bar">
+        <button class="btn-action primary" id="modalUnderstoodBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JavaScript CDN -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    /* ==========================================================================
+       Historical & Spatial Data (Self-Contained)
+       ========================================================================== */
+
+    const RIVER_SYSTEMS = [
+      {
+        name: "Illinois River",
+        id: "illinois_river",
+        description: "Formed at the confluence of the Kankakee and Des Plaines rivers, the Illinois flows 273 miles southwest into the Mississippi at Grafton. It served as the central seasonal trade and agricultural spine for the Illinois Confederacy.",
+        coordinates: [
+          [41.393, -88.190], [41.362, -88.423], [41.334, -88.705], [41.346, -88.843],
+          [41.328, -88.995], [41.332, -89.130], [41.280, -89.330], [41.112, -89.360],
+          [40.970, -89.435], [40.750, -89.550], [40.690, -89.590], [40.570, -89.650],
+          [40.300, -90.060], [40.020, -90.430], [39.830, -90.560], [39.630, -90.610],
+          [39.160, -90.620], [38.970, -90.430]
+        ]
+      },
+      {
+        name: "Kankakee River",
+        id: "kankakee_river",
+        description: "Draining the Grand Kankakee Marsh, this river was an abundant freshwater wetland complex supporting Potawatomi seasonal wild rice gathering, waterfowl hunting, and winter trapping.",
+        coordinates: [
+          [41.180, -87.530], [41.160, -87.660], [41.120, -87.860], [41.150, -87.890],
+          [41.310, -88.140], [41.393, -88.190]
+        ]
+      },
+      {
+        name: "Des Plaines River",
+        id: "des_plaines_river",
+        description: "Connected to Lake Michigan via the Chicago Portage, linking the Great Lakes drainage basin to the Mississippi River watershed.",
+        coordinates: [
+          [42.300, -87.950], [42.150, -87.910], [42.030, -87.880], [41.815, -87.820],
+          [41.780, -87.860], [41.670, -88.000], [41.520, -88.080], [41.393, -88.190]
+        ]
+      },
+      {
+        name: "Wabash River",
+        id: "wabash_river",
+        description: "The primary eastern water basin defining the Illinois-Indiana border; historic home territory of Piankeshaw, Wea, and Miami agricultural villages.",
+        coordinates: [
+          [39.470, -87.420], [39.300, -87.570], [39.110, -87.660], [38.900, -87.520],
+          [38.678, -87.528], [38.590, -87.640], [38.410, -87.760], [38.260, -87.990],
+          [38.130, -87.930], [37.810, -88.030]
+        ]
+      }
+    ];
+
+    const SEASONAL_CORRIDORS = [
+      {
+        name: "Peoria & Illinois River Agricultural Floodplain",
+        id: "corridor_peoria",
+        nations: ["Peoria", "Kaskaskia", "Illinois Confederacy"],
+        season: "Late Spring – Autumn",
+        activity: "Extensive maize, bean, and squash cultivation in alluvial silt floodplains; seasonal freshwater fishing and wild seed harvesting.",
+        quote: "The soil of these valleys is so rich that corn grows fifteen feet high with very little labor. Here the women plant vast fields while the river provides sturgeon and fowl.",
+        quoteSource: "Father Jacques Marquette, 1674",
+        disruption: "The imposition of township grids legally severed Indigenous families from river floodplains. Mill dams altered natural water levels, flooding traditional corn mounds and destroying communal fish weirs.",
+        coordinates: [
+          [41.35, -89.15], [41.15, -89.20], [40.85, -89.35], [40.55, -89.50],
+          [40.25, -89.90], [40.20, -90.20], [40.40, -90.25], [40.75, -89.85],
+          [41.05, -89.55], [41.35, -89.15]
+        ]
+      },
+      {
+        name: "Grand Kankakee Marsh Wild Rice & Waterfowl Wetlands",
+        id: "corridor_kankakee",
+        nations: ["Potawatomi", "Miami"],
+        season: "Late Summer & Winter",
+        activity: "Wild rice (manoomin) harvesting in shallow marshes, autumn waterfowl netting, and winter muskrat and beaver trapping.",
+        quote: "My people found in the Kankakee marshes everything necessary for life. The canoes glided through fields of wild rice so dense the stalks touched both gunwales.",
+        quoteSource: "Simon Pokagon, Potawatomi author, 1899",
+        disruption: "1816 and 1832 treaty cessions partitioned the wetland into surveyor sections. Settlers subsequently ditched and tile-drained the marsh, destroying wild rice beds to create dry commercial cropland.",
+        coordinates: [
+          [41.45, -88.20], [41.42, -87.52], [41.05, -87.52], [41.02, -87.95],
+          [41.15, -88.35], [41.35, -88.40], [41.45, -88.20]
+        ]
+      },
+      {
+        name: "Wabash Valley Seasonal Gathering & Winter Hunting",
+        id: "corridor_wabash",
+        nations: ["Piankeshaw", "Wea", "Miami"],
+        season: "Year-Round Seasonal Round",
+        activity: "Summer river bark villages with maize and melon patches; winter dispersal into sheltered hardwood river breaks for white-tailed deer hunting.",
+        quote: "We lived along the Ouabache where the water flows clear over gravel bars. Our villages were permanent, yet our hunting parties ranged freely across the prairies.",
+        quoteSource: "Piankeshaw Council Minutes, 1793",
+        disruption: "The 1803 Treaty of Vincennes established the Vincennes Meridian baseline, cutting through seasonal migration routes between summer planting towns and winter hunting valleys.",
+        coordinates: [
+          [39.55, -87.80], [39.35, -87.45], [38.50, -87.45], [38.25, -87.75],
+          [38.35, -88.15], [38.85, -88.10], [39.35, -88.05], [39.55, -87.80]
+        ]
+      },
+      {
+        name: "Rock River & Saukenuk Agricultural Corridor",
+        id: "corridor_rock",
+        nations: ["Sauk", "Meskwaki (Fox)"],
+        season: "Spring Planting & Autumn Harvest",
+        activity: "Communal cultivation of over 800 acres of corn and squash at Saukenuk; regional gathering of mineral lead and autumn communal hunts.",
+        quote: "My reason teaches me that land cannot be sold. The Great Spirit gave it to his children to live upon, and cultivate, as long as they need it for sustenance.",
+        quoteSource: "Black Hawk (Ma-ka-tai-me-she-kia-kiak), 1833",
+        disruption: "Disputed 1804 and 1832 treaties treated agricultural lands as void of title. Settler plows cut through Sauk burial sites and cornfields, precipitating the Black Hawk War and forced military expulsion.",
+        coordinates: [
+          [42.15, -90.35], [42.25, -89.25], [41.70, -89.35], [41.40, -90.15],
+          [41.35, -90.65], [41.80, -90.50], [42.15, -90.35]
+        ]
+      }
+    ];
+
+    const TREATY_CESSIONS = [
+      {
+        name: "Treaty of Vincennes",
+        year: 1803,
+        id: "treaty_1803",
+        royceNumber: "Royce #44 / 48",
+        nations: ["Piankeshaw", "Kaskaskia", "Wea"],
+        acres: "1.6 Million Acres",
+        percentState: 4.5,
+        negotiator: "William Henry Harrison",
+        description: "Enclosed a rectangular surveyor tract surrounding Post Vincennes on both sides of the Wabash River.",
+        disruption: "Established the first federal surveyor meridian in the region, cutting through seasonal hunting ranges and laying the groundwork for the Public Land Survey System.",
+        coordinates: [
+          [38.98, -88.10], [38.98, -87.25], [38.38, -87.25], [38.38, -88.10], [38.98, -88.10]
+        ]
+      },
+      {
+        name: "Treaty of St. Louis (Canal Strip)",
+        year: 1816,
+        id: "treaty_1816",
+        royceNumber: "Royce #77 / 78",
+        nations: ["Ottawa, Chippewa, and Potawatomi"],
+        acres: "1.8 Million Acres",
+        percentState: 5.0,
+        negotiator: "Ninian Edwards & Auguste Chouteau",
+        description: "A 20-mile-wide surveyor corridor running from Lake Michigan southwest down the Illinois River to Ottawa.",
+        disruption: "Severed the historic Chicago Portage. The corridor was acquired specifically to construct the Illinois and Michigan Canal, turning an Indigenous canoe route into a commercial transit line.",
+        coordinates: [
+          [42.12, -87.65], [41.35, -88.90], [41.18, -88.65], [41.75, -87.52], [42.12, -87.65]
+        ]
+      },
+      {
+        name: "Treaty of Edwardsville",
+        year: 1819,
+        id: "treaty_1819",
+        royceNumber: "Royce #110",
+        nations: ["Kickapoo Nation"],
+        acres: "10.2 Million Acres",
+        percentState: 29.0,
+        negotiator: "Auguste Chouteau & Benjamin Stephenson",
+        description: "Ceded the central prairie between the Illinois and Wabash River watersheds.",
+        disruption: "Enclosed vast Kickapoo communal hunting prairies under the surveyor grid, leading to the military dispersal of Kickapoo towns toward southern Missouri.",
+        coordinates: [
+          [40.40, -89.90], [40.85, -88.20], [39.60, -87.70], [38.90, -88.60],
+          [39.20, -90.20], [40.00, -90.40], [40.40, -89.90]
+        ]
+      },
+      {
+        name: "Treaty of Prairie du Chien",
+        year: 1829,
+        id: "treaty_1829",
+        royceNumber: "Royce #147 / 148",
+        nations: ["Chippewa, Ottawa, and Potawatomi"],
+        acres: "8.5 Million Acres",
+        percentState: 24.0,
+        negotiator: "Pierre Menard & Caleb Atwater",
+        description: "Ceded northern Illinois prairie lands and lead-mining regions south of the Wisconsin line.",
+        disruption: "Forced the rapid enclosure of Indigenous lead mines near Galena and displaced Potawatomi seasonal camps from the Rock and Fox River valleys.",
+        coordinates: [
+          [42.50, -90.55], [42.50, -88.50], [41.70, -88.65], [41.35, -88.90],
+          [41.60, -89.90], [42.00, -90.25], [42.50, -90.55]
+        ]
+      },
+      {
+        name: "Treaty of Fort Armstrong (Black Hawk Cession)",
+        year: 1832,
+        id: "treaty_1832",
+        royceNumber: "Royce #175",
+        nations: ["Sauk and Fox (Meskwaki)"],
+        acres: "6.0 Million Acres",
+        percentState: 17.0,
+        negotiator: "Major General Winfield Scott",
+        description: "Imposed immediately after the Bad Axe Massacre, seizing western Illinois along the Mississippi.",
+        disruption: "Prohibited Indigenous presence east of the Mississippi. The village of Saukenuk was destroyed and Sauk families were permanently alienated from ancestral cornfields.",
+        coordinates: [
+          [42.50, -90.65], [41.45, -90.65], [41.30, -90.30], [41.60, -89.90],
+          [42.50, -90.55], [42.50, -90.65]
+        ]
+      },
+      {
+        name: "Treaty of Chicago",
+        year: 1833,
+        id: "treaty_1833",
+        royceNumber: "Royce #187",
+        nations: ["United Nation of Chippewa, Ottawa, and Potawatomi"],
+        acres: "6.8 Million Acres",
+        percentState: 19.0,
+        negotiator: "George B. Porter",
+        description: "Final comprehensive cession of all remaining Potawatomi land in northeastern Illinois.",
+        disruption: "Served as the legal mandate for forced removal. In 1838, federal soldiers rounded up over 850 Potawatomi people on the forced march known as the Potawatomi Trail of Death.",
+        coordinates: [
+          [42.50, -88.50], [42.50, -87.80], [41.75, -87.52], [41.18, -88.65],
+          [41.70, -88.65], [42.50, -88.50]
+        ]
+      }
+    ];
+
+    const STORY_POINTS = [
+      {
+        name: "Grand Village of the Kaskaskia (Starved Rock)",
+        coordinates: [41.325, -88.995],
+        id: "point_kaskaskia",
+        nations: "Illinois Confederacy (Kaskaskia, Peoria)",
+        category: "Political & Spiritual Capital",
+        summary: "The primary gathering hub of the Illinois Confederacy, sheltering upwards of 20,000 seasonal residents across miles of floodplain bark lodges.",
+        analysis: "Positioned directly beneath the sandstone bluffs of Starved Rock, this village commanded the fertile Illinois River bottomlands. Matrilineal agricultural cycles aligned with seasonal river floods. Settler fort construction and subsequent treaty surveys transformed this sovereign river nexus into an empty landmark on state tourist maps.",
+        quote: "It is composed of 300 to 400 cabins, all filled with people, possessing an abundance of corn, squashes, and beaver skins.",
+        quoteSource: "Father Claude Allouez, 1677"
+      },
+      {
+        name: "Pimiteoui / Peoria Lake",
+        coordinates: [40.702, -89.585],
+        id: "point_peoria",
+        nations: "Peoria Nation (Iliniwek)",
+        category: "Seasonal Fishery & Metropolis",
+        summary: "Where the Illinois River widens into a lake basin, sustaining dense populations through fish weirs, wild rice beds, and autumn waterfowl.",
+        analysis: "In 1812, territorial militia led by Thomas Forsyth raided and burned the peaceful French-Indigenous village of Peoria without provocation, burning winter food stores and looting artifacts. The subsequent 1818–1819 treaties dispossessed Peoria families of their ancestral lake frontage.",
+        quote: "The soldiers entered our houses, took all our blankets and silver works, and threw our dried corn into the river.",
+        quoteSource: "Antoine LeClaire, Witness to the 1812 Raid"
+      },
+      {
+        name: "Confluence of Kankakee & Des Plaines",
+        coordinates: [41.393, -88.190],
+        id: "point_confluence",
+        nations: "Potawatomi, Odawa, Ojibwe",
+        category: "Hydrological Nexus & Portage Gateway",
+        summary: "The geographic birth of the Illinois River and the crucial transit node linking the Great Lakes basin to the Mississippi River drainage.",
+        analysis: "This confluence was systematically targeted by the 1816 Treaty of St. Louis to construct the Illinois and Michigan Canal. By imposing a rigid 20-mile-wide surveyor strip across this sacred waterway junction, settler engineers converted an Indigenous canoe highway into a private canal grid.",
+        quote: "The rivers were our roads. Where two rivers joined was where our councils gathered. Now white men build locks and charge tolls upon the water we were born beside.",
+        quoteSource: "Potawatomi council speaker, 1826"
+      },
+      {
+        name: "Chicago Portage & Mud Lake (Checagou)",
+        coordinates: [41.815, -87.785],
+        id: "point_chicago",
+        nations: "Potawatomi, Miami, Sauk",
+        category: "Continental Divide Portage",
+        summary: "A marshy seasonal overland portage between the Chicago River and the Des Plaines River that allowed canoe transit between the Atlantic Ocean and the Gulf of Mexico.",
+        analysis: "Indigenous portage trails were commodified into real estate speculation plots in the 1830s. The 1833 Treaty of Chicago forced the final expulsion of thousands of Potawatomi people from their seasonal gathering grounds around the mouth of the Chicago River.",
+        quote: "You have taken our portage, our wild onion fields, and our lake. Where you now build your brick towns, our grandmothers dried fish on cedar frames.",
+        quoteSource: "Pabami, Odawa / Potawatomi headman, 1833"
+      },
+      {
+        name: "Post Vincennes & Lower Wabash Confluence",
+        coordinates: [38.678, -87.528],
+        id: "point_vincennes",
+        nations: "Piankeshaw, Wea, Miami",
+        category: "Historic Wabash Riverine Hub",
+        summary: "Long-standing river metropolis connecting the Ohio, Wabash, and White River valleys, home to Piankeshaw and French-allied trade networks.",
+        analysis: "Selected by territorial governor William Henry Harrison as the epicenter for the 1803 Treaty of Vincennes. It established the Vincennes Meridian (one of the earliest Cartesian surveyor baselines), laying the geometric framework for privatizing the eastern Illinois prairie.",
+        quote: "When Harrison drew lines upon the paper, he claimed our old towns and our river crossings.",
+        quoteSource: "Piankeshaw council statement, 1805"
+      },
+      {
+        name: "Saukenuk & Rock River Confluence",
+        coordinates: [41.480, -90.575],
+        id: "point_saukenuk",
+        nations: "Sauk and Meskwaki (Fox)",
+        category: "Agrarian Capital & Resistance",
+        summary: "One of the most extensive Indigenous agricultural capitals in North America, with 800+ acres of communal corn, squash, and bean fields cultivated for centuries.",
+        analysis: "In 1831, white squatters burned Sauk lodges and fenced off women's cornfields while the Sauk were on their winter hunt. Black Hawk returned in 1832 to defend their crops, precipitating the Black Hawk War and resulting in total military expulsion under the 1832 Black Hawk Purchase.",
+        quote: "Rock River was a beautiful country. I loved my town, my cornfields, and the home of my people. I fought for it, and it is now our duty to remember.",
+        quoteSource: "Black Hawk (Ma-ka-tai-me-she-kia-kiak), 1833"
+      }
+    ];
+
+    /* ==========================================================================
+       Map Initialization
+       ========================================================================== */
+    const MAP_CENTER = [40.35, -89.40];
+    const MAP_ZOOM = 7.2;
+
+    const map = L.map('map', {
+      center: MAP_CENTER,
+      zoom: MAP_ZOOM,
+      minZoom: 6,
+      maxZoom: 12,
+      zoomControl: true,
+      attributionControl: true
+    });
+
+    // Basemaps (Esri Free Services - No API Key Required)
+    const esriLightGray = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 16,
+      attribution: 'Tiles &copy; Esri | Counter-Mapping Illinois (1800–1840)'
+    });
+
+    const esriShadedRelief = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 13,
+      attribution: 'Tiles &copy; Esri &mdash; Shaded Relief'
+    });
+
+    let currentBasemap = esriLightGray;
+    esriLightGray.addTo(map);
+
+    const stateBounds = L.latLngBounds([36.9, -91.6], [42.6, -87.4]);
+    map.setMaxBounds(stateBounds.pad(0.35));
+
+    // Vector Layer Groups
+    const riverLayerGroup = L.layerGroup().addTo(map);
+    const corridorLayerGroup = L.layerGroup().addTo(map);
+    const treatyLayerGroup = L.layerGroup().addTo(map);
+    const pointLayerGroup = L.layerGroup().addTo(map);
+
+    let currentSelectedYear = 1800;
+    let isPlaying = false;
+    let playInterval = null;
+
+    /* ==========================================================================
+       Render Layers
+       ========================================================================== */
+
+    // 1. Waterways
+    function renderRivers() {
+      riverLayerGroup.clearLayers();
+      RIVER_SYSTEMS.forEach(river => {
+        const polyline = L.polyline(river.coordinates, {
+          color: '#1b75bb',
+          weight: 3.2,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(riverLayerGroup);
+
+        polyline.bindTooltip(`<strong>${river.name}</strong><br><span style="font-size:11px;color:#555;">Perennial Canoe Highway</span>`, {
+          sticky: true
+        });
+
+        polyline.on('click', () => {
+          showRiverDetail(river, polyline.getBounds().getCenter());
+        });
+      });
+    }
+
+    // 2. Seasonal Lifeway Corridors
+    function renderCorridors() {
+      corridorLayerGroup.clearLayers();
+      SEASONAL_CORRIDORS.forEach(corridor => {
+        const polygon = L.polygon(corridor.coordinates, {
+          color: '#2e7d32',
+          weight: 1.8,
+          dashArray: '5, 5',
+          fillColor: '#2e7d32',
+          fillOpacity: 0.16
+        }).addTo(corridorLayerGroup);
+
+        polygon.bindTooltip(`<strong>${corridor.name}</strong><br><span style="font-size:11px;color:#555;">Nations: ${corridor.nations.join(', ')}</span>`, {
+          sticky: true
+        });
+
+        polygon.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          showCorridorDetail(corridor, polygon.getBounds().getCenter());
+        });
+      });
+    }
+
+    // 3. Treaty Cessions (Filtered by Year)
+    function renderTreaties(targetYear) {
+      treatyLayerGroup.clearLayers();
+      let activeCount = 0;
+      let totalAcres = 0;
+      let totalPercent = 0;
+
+      TREATY_CESSIONS.forEach(treaty => {
+        if (treaty.year <= targetYear) {
+          activeCount++;
+          totalAcres += parseFloat(treaty.acres);
+          totalPercent += treaty.percentState;
+
+          const polygon = L.polygon(treaty.coordinates, {
+            color: '#b91c1c',
+            weight: 2,
+            fillColor: '#b91c1c',
+            fillOpacity: 0.20
+          }).addTo(treatyLayerGroup);
+
+          polygon.bindTooltip(`<strong>${treaty.name} (${treaty.year})</strong><br><span style="font-size:11px;color:#555;">${treaty.royceNumber} • ${treaty.acres}</span>`, {
+            sticky: true
+          });
+
+          polygon.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            showTreatyDetail(treaty, polygon.getBounds().getCenter());
+          });
+        }
+      });
+
+      // Update statistics
+      document.getElementById('activeTreatyCount').textContent = `${activeCount} / ${TREATY_CESSIONS.length}`;
+      document.getElementById('statTreatiesCount').textContent = activeCount;
+      document.getElementById('statAcres').textContent = `${totalAcres.toFixed(1)}M`;
+      document.getElementById('statPercent').textContent = `${Math.min(100, Math.round(totalPercent))}%`;
+    }
+
+    // 4. Historical Story Nodes
+    function renderStoryPoints() {
+      pointLayerGroup.clearLayers();
+      STORY_POINTS.forEach((point, idx) => {
+        const pinIcon = L.divIcon({
+          className: 'node-pin-wrap',
+          html: `<div class="node-pin">${idx + 1}</div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        });
+
+        const marker = L.marker(point.coordinates, { icon: pinIcon }).addTo(pointLayerGroup);
+        marker.bindTooltip(`<strong>${point.name}</strong><br><span style="font-size:11px;color:#555;">${point.nations}</span>`, {
+          sticky: true
+        });
+
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          showStoryPointDetail(point);
+        });
+      });
+    }
+
+    /* ==========================================================================
+       Right Slide-out Drawer
+       ========================================================================== */
+    const narrativeDrawer = document.getElementById('narrativeDrawer');
+    const drawerBody = document.getElementById('drawerBody');
+    let currentFocusTarget = MAP_CENTER;
+
+    function openDrawer() {
+      narrativeDrawer.classList.add('open');
+      document.getElementById('openDrawerTab').style.display = 'none';
+    }
+
+    function closeDrawer() {
+      narrativeDrawer.classList.remove('open');
+      document.getElementById('openDrawerTab').style.display = 'inline-flex';
+    }
+
+    function renderOverview() {
+      currentFocusTarget = MAP_CENTER;
+
+      drawerBody.innerHTML = `
+        <div>
+          <h2 class="drawer-heading">Counter-Mapping the Prairie State</h2>
+          <div class="meta-tags-row">
+            <span class="meta-tag">Illinois & Wabash Basins</span>
+            <span class="meta-tag">1800 – 1840 Cessions</span>
+            <span class="meta-tag highlight">Peluso & Wood Framework</span>
+          </div>
+        </div>
+
+        <div class="drawer-body-text">
+          Before European settler cartography imposed rigid geometric grids across Illinois, the landscape was structured by a living web of waterways. For the <strong>Peoria, Kaskaskia, Potawatomi, Miami, Kickapoo, Sauk, and Meskwaki</strong>, rivers were not borders—they were communal lifelines.
+        </div>
+
+        <div class="analysis-callout">
+          <h4>The Mechanism of Enclosure</h4>
+          Between 1803 and 1833, federal treaty commissioners applied the <strong>Public Land Survey System (PLSS)</strong> to subdivide Illinois into rectangular township squares. These survey lines disregarded watershed ecology, cutting through seasonal wild rice wetlands, communal cornfields, and sacred river junctions to prepare the land for private real estate speculation.
+        </div>
+
+        <div class="primary-quote">
+          "The white man drew a line upon paper, and suddenly my children were forbidden from gathering wild rice in the marsh where our mothers had harvested for centuries."
+          <cite>— Council of the Potawatomi Nation, Chicago, 1833</cite>
+        </div>
+
+        <div class="drawer-body-text">
+          <strong>How to explore this map:</strong>
+          <ul style="padding-left: 20px; margin-top: 8px; font-size: 13.5px; line-height: 1.6;">
+            <li>Drag or play the <strong>Timeline Slider</strong> at the bottom to observe 19th-century treaty cessions systematically enclosing seasonal corridors.</li>
+            <li>Click any <strong>Story Node (1–6)</strong> to examine historical confrontations between Indigenous water sovereignty and settler property law.</li>
+            <li>Use the <strong>Layers</strong> checklist in the left panel to toggle river systems and treaty boundaries.</li>
+          </ul>
+        </div>
+      `;
+    }
+
+    function showStoryPointDetail(point) {
+      currentFocusTarget = point.coordinates;
+
+      drawerBody.innerHTML = `
+        <div>
+          <h2 class="drawer-heading">${point.name}</h2>
+          <div class="meta-tags-row">
+            <span class="meta-tag highlight">${point.nations}</span>
+            <span class="meta-tag">${point.category}</span>
+          </div>
+        </div>
+
+        <div class="drawer-body-text">
+          ${point.summary}
+        </div>
+
+        <div class="analysis-callout">
+          <h4>Counter-Cartographic Analysis</h4>
+          ${point.analysis}
+        </div>
+
+        <div class="primary-quote">
+          "${point.quote}"
+          <cite>— ${point.quoteSource}</cite>
+        </div>
+      `;
+
+      openDrawer();
+      map.flyTo(point.coordinates, 9, { duration: 1.0 });
+    }
+
+    function showCorridorDetail(corridor, centerCoord) {
+      currentFocusTarget = centerCoord;
+
+      drawerBody.innerHTML = `
+        <div>
+          <h2 class="drawer-heading">${corridor.name}</h2>
+          <div class="meta-tags-row">
+            <span class="meta-tag highlight">${corridor.nations.join(', ')}</span>
+            <span class="meta-tag">Season: ${corridor.season}</span>
+          </div>
+        </div>
+
+        <div class="drawer-body-text">
+          <strong>Seasonal Lifeway & Stewardship:</strong><br>
+          ${corridor.activity}
+        </div>
+
+        <div class="analysis-callout">
+          <h4>Spatial Disruption & Land Loss</h4>
+          ${corridor.disruption}
+        </div>
+
+        <div class="primary-quote">
+          "${corridor.quote}"
+          <cite>— ${corridor.quoteSource}</cite>
+        </div>
+      `;
+
+      openDrawer();
+      map.flyTo(centerCoord, 8.5, { duration: 1.0 });
+    }
+
+    function showTreatyDetail(treaty, centerCoord) {
+      currentFocusTarget = centerCoord;
+
+      drawerBody.innerHTML = `
+        <div>
+          <h2 class="drawer-heading">${treaty.name}</h2>
+          <div class="meta-tags-row">
+            <span class="meta-tag highlight">Year: ${treaty.year}</span>
+            <span class="meta-tag">${treaty.royceNumber}</span>
+            <span class="meta-tag">${treaty.acres} (~${treaty.percentState}% of Illinois)</span>
+          </div>
+        </div>
+
+        <div class="drawer-body-text">
+          <strong>Signatory Nations:</strong> ${treaty.nations.join(', ')}<br>
+          <strong>U.S. Commissioner:</strong> ${treaty.negotiator}<br><br>
+          ${treaty.description}
+        </div>
+
+        <div class="analysis-callout">
+          <h4>Enclosure of Water Access & Mobility</h4>
+          ${treaty.disruption}
+        </div>
+      `;
+
+      openDrawer();
+      map.flyTo(centerCoord, 8, { duration: 1.0 });
+    }
+
+    function showRiverDetail(river, centerCoord) {
+      currentFocusTarget = centerCoord;
+
+      drawerBody.innerHTML = `
+        <div>
+          <h2 class="drawer-heading">${river.name}</h2>
+          <div class="meta-tags-row">
+            <span class="meta-tag highlight">Living Waterway</span>
+            <span class="meta-tag">Transit Artery</span>
+          </div>
+        </div>
+
+        <div class="drawer-body-text">
+          ${river.description}
+        </div>
+
+        <div class="analysis-callout">
+          <h4>Ecological & Sovereignty Context</h4>
+          Prior to colonization, this river sustained seasonal canoe trade, multi-nation council sites, and rich freshwater mussel beds. Settler canalization, levee construction, and industrial dredging fundamentally altered water depth, destroying wild rice beds and severing traditional floodplain agriculture.
+        </div>
+      `;
+
+      openDrawer();
+      map.flyTo(centerCoord, 8, { duration: 1.0 });
+    }
+
+    /* ==========================================================================
+       Timeline & Playback Controls
+       ========================================================================== */
+    const yearSlider = document.getElementById('yearSlider');
+    const yearVal = document.getElementById('yearVal');
+    const playBtn = document.getElementById('playBtn');
+    const playLabel = document.getElementById('playLabel');
+    const prevTreatyBtn = document.getElementById('prevTreatyBtn');
+    const nextTreatyBtn = document.getElementById('nextTreatyBtn');
+
+    const TREATY_YEARS = [1800, 1803, 1816, 1819, 1829, 1832, 1833, 1840];
+
+    function updateYear(newYear) {
+      currentSelectedYear = parseInt(newYear);
+      yearSlider.value = currentSelectedYear;
+      yearVal.textContent = currentSelectedYear;
+
+      document.querySelectorAll('.tick-item').forEach(tick => {
+        const y = parseInt(tick.getAttribute('data-year'));
+        if (y <= currentSelectedYear) {
+          tick.classList.add('active');
+        } else {
+          tick.classList.remove('active');
+        }
+      });
+
+      renderTreaties(currentSelectedYear);
+    }
+
+    yearSlider.addEventListener('input', (e) => {
+      updateYear(e.target.value);
+    });
+
+    document.querySelectorAll('.tick-item').forEach(tick => {
+      tick.addEventListener('click', () => {
+        updateYear(tick.getAttribute('data-year'));
+      });
+    });
+
+    function togglePlay() {
+      if (isPlaying) {
+        pausePlayback();
+      } else {
+        startPlayback();
+      }
+    }
+
+    function startPlayback() {
+      isPlaying = true;
+      playLabel.textContent = 'Pause';
+      if (currentSelectedYear >= 1840) {
+        updateYear(1800);
+      }
+      playInterval = setInterval(() => {
+        if (currentSelectedYear < 1840) {
+          updateYear(currentSelectedYear + 1);
+        } else {
+          pausePlayback();
+        }
+      }, 650);
+    }
+
+    function pausePlayback() {
+      isPlaying = false;
+      playLabel.textContent = 'Play';
+      if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+      }
+    }
+
+    playBtn.addEventListener('click', togglePlay);
+
+    prevTreatyBtn.addEventListener('click', () => {
+      pausePlayback();
+      const past = TREATY_YEARS.filter(y => y < currentSelectedYear);
+      if (past.length > 0) {
+        updateYear(past[past.length - 1]);
+      } else {
+        updateYear(1800);
+      }
+    });
+
+    nextTreatyBtn.addEventListener('click', () => {
+      pausePlayback();
+      const future = TREATY_YEARS.filter(y => y > currentSelectedYear);
+      if (future.length > 0) {
+        updateYear(future[0]);
+      } else {
+        updateYear(1840);
+      }
+    });
+
+    /* ==========================================================================
+       Basemap & Layer Switchers
+       ========================================================================== */
+    const btnBasemapLight = document.getElementById('btnBasemapLight');
+    const btnBasemapShaded = document.getElementById('btnBasemapShaded');
+
+    btnBasemapLight.addEventListener('click', () => {
+      if (currentBasemap !== esriLightGray) {
+        map.removeLayer(currentBasemap);
+        currentBasemap = esriLightGray;
+        map.addLayer(currentBasemap);
+        currentBasemap.bringToBack();
+        btnBasemapLight.classList.add('active');
+        btnBasemapShaded.classList.remove('active');
+      }
+    });
+
+    btnBasemapShaded.addEventListener('click', () => {
+      if (currentBasemap !== esriShadedRelief) {
+        map.removeLayer(currentBasemap);
+        currentBasemap = esriShadedRelief;
+        map.addLayer(currentBasemap);
+        currentBasemap.bringToBack();
+        btnBasemapShaded.classList.add('active');
+        btnBasemapLight.classList.remove('active');
+      }
+    });
+
+    const toggleRivers = document.getElementById('toggleRivers');
+    const toggleCorridors = document.getElementById('toggleCorridors');
+    const toggleTreaties = document.getElementById('toggleTreaties');
+    const togglePoints = document.getElementById('togglePoints');
+    const toggleAllLayers = document.getElementById('toggleAllLayers');
+
+    toggleRivers.addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(riverLayerGroup);
+      else map.removeLayer(riverLayerGroup);
+    });
+
+    toggleCorridors.addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(corridorLayerGroup);
+      else map.removeLayer(corridorLayerGroup);
+    });
+
+    toggleTreaties.addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(treatyLayerGroup);
+      else map.removeLayer(treatyLayerGroup);
+    });
+
+    togglePoints.addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(pointLayerGroup);
+      else map.removeLayer(pointLayerGroup);
+    });
+
+    let allChecked = true;
+    toggleAllLayers.addEventListener('click', () => {
+      allChecked = !allChecked;
+      [toggleRivers, toggleCorridors, toggleTreaties, togglePoints].forEach(cb => {
+        cb.checked = allChecked;
+        cb.dispatchEvent(new Event('change'));
+      });
+      toggleAllLayers.textContent = allChecked ? 'Hide All' : 'Show All';
+    });
+
+    document.getElementById('resetViewBtn').addEventListener('click', () => {
+      map.flyTo(MAP_CENTER, MAP_ZOOM, { duration: 1.0 });
+    });
+
+    // Drawer Buttons
+    document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
+    document.getElementById('openDrawerTab').addEventListener('click', openDrawer);
+
+    document.getElementById('drawerOverviewBtn').addEventListener('click', () => {
+      renderOverview();
+      map.flyTo(MAP_CENTER, MAP_ZOOM, { duration: 1.0 });
+    });
+
+    document.getElementById('drawerFocusBtn').addEventListener('click', () => {
+      if (currentFocusTarget) {
+        map.flyTo(currentFocusTarget, 9, { duration: 1.0 });
+      }
+    });
+
+    // Modal Events
+    const aboutModal = document.getElementById('aboutModal');
+    document.getElementById('openAboutBtn').addEventListener('click', () => {
+      aboutModal.classList.add('open');
+    });
+
+    [document.getElementById('closeModalBtn'), document.getElementById('modalUnderstoodBtn')].forEach(btn => {
+      btn.addEventListener('click', () => {
+        aboutModal.classList.remove('open');
+      });
+    });
+
+    aboutModal.addEventListener('click', (e) => {
+      if (e.target === aboutModal) aboutModal.classList.remove('open');
+    });
+
+    /* ==========================================================================
+       Initial Boot
+       ========================================================================== */
+    function init() {
+      renderRivers();
+      renderCorridors();
+      renderTreaties(currentSelectedYear);
+      renderStoryPoints();
+      renderOverview();
+      openDrawer();
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>
