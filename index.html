@@ -77,7 +77,7 @@
       border-radius: var(--radius-sm) !important;
       overflow: hidden;
       margin-left: 18px !important;
-      margin-top: 18px !important;
+      margin-top: 66px !important;
     }
     .leaflet-control-zoom a {
       background-color: var(--surface) !important;
@@ -96,29 +96,95 @@
       padding: 2px 8px !important;
     }
 
+    /* Hamburger Menu Button */
+    .btn-hamburger {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 1010;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+      user-select: none;
+    }
+    .btn-hamburger:hover {
+      background: var(--surface-subtle);
+      border-color: var(--border-dark);
+      box-shadow: var(--shadow-md);
+    }
+    .btn-hamburger:active {
+      transform: scale(0.98);
+    }
+    .hamburger-icon {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+      width: 15px;
+      height: 12px;
+    }
+    .hamburger-icon span {
+      display: block;
+      height: 2px;
+      width: 100%;
+      background: var(--text-primary);
+      border-radius: 1px;
+    }
+
     /* ==========================================================================
-       Left Control Panel (Academic Header, Basemap, Layers, Legend)
+       Left Control Panel (Slide-out Hamburger Menu)
        ========================================================================== */
     .control-panel {
       position: absolute;
       top: 18px;
       left: 18px;
-      z-index: 1000;
-      width: 360px;
+      bottom: 20px;
+      width: 380px;
       max-width: calc(100vw - 36px);
+      z-index: 1020;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--shadow-lg);
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      transform: translateX(calc(-100% - 30px));
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .control-panel.open {
+      transform: translateX(0);
     }
 
     .panel-header {
-      padding: 16px 20px 14px 20px;
+      padding: 14px 18px 14px 18px;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
+      flex-shrink: 0;
+    }
+    .panel-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .panel-brand-tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--color-marker);
     }
     .panel-title {
       font-family: var(--font-serif);
@@ -167,7 +233,7 @@
     }
 
     .panel-body {
-      max-height: calc(100vh - 320px);
+      flex: 1;
       overflow-y: auto;
       padding: 14px 20px 18px 20px;
       scrollbar-width: thin;
@@ -631,28 +697,6 @@
       gap: 8px;
     }
 
-    /* Side button to reopen drawer when closed */
-    .btn-reopen-drawer {
-      position: absolute;
-      top: 18px;
-      right: 18px;
-      z-index: 990;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-sm);
-      border-radius: var(--radius-sm);
-      padding: 7px 12px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-primary);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn-reopen-drawer:hover {
-      background: var(--surface-subtle);
-    }
 
     /* ==========================================================================
        Theoretical Framework Modal
@@ -768,10 +812,20 @@
 
     /* Responsive adjustments */
     @media (max-width: 860px) {
-      .control-panel {
-        width: 320px;
+      .btn-hamburger {
         top: 12px;
         left: 12px;
+        padding: 6px 11px;
+      }
+      .leaflet-control-zoom {
+        margin-left: 12px !important;
+        margin-top: 56px !important;
+      }
+      .control-panel {
+        width: calc(100vw - 24px);
+        top: 12px;
+        left: 12px;
+        bottom: 12px;
       }
       .timeline-panel {
         width: calc(100vw - 24px);
@@ -795,9 +849,23 @@
   <!-- Map Container -->
   <div id="map"></div>
 
-  <!-- Left Control Panel -->
-  <aside class="control-panel" id="controlPanel">
+  <!-- Hamburger Button for Left Menu -->
+  <button class="btn-hamburger" id="hamburgerBtn" aria-label="Toggle Navigation Menu" title="Open Map Controls">
+    <div class="hamburger-icon">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <span>Menu</span>
+  </button>
+
+  <!-- Left Control Panel (Slide-out Hamburger Menu) -->
+  <aside class="control-panel" id="controlPanel" aria-label="Map Controls & Layers">
     <div class="panel-header">
+      <div class="panel-header-bar">
+        <span class="panel-brand-tag">Counter-Map Controls</span>
+        <button class="btn-close" id="closeMenuBtn" title="Close Menu" aria-label="Close Menu">✕</button>
+      </div>
       <h1 class="panel-title">Mapping Indigenous Waterways & Land Loss in Illinois</h1>
       <p class="panel-subtitle">Contrasting dynamic riverine lifeways against 19th-century settler land treaties (1800–1840).</p>
       
@@ -930,24 +998,19 @@
     </div>
   </div>
 
-  <!-- Reopen Drawer Button -->
-  <button class="btn-reopen-drawer" id="openDrawerTab">
-    Historical Analysis
-  </button>
-
-  <!-- Right Slide-out Drawer -->
-  <aside class="narrative-drawer" id="narrativeDrawer">
+  <!-- Right Slide-out Detail Modal / Drawer (Opens when an element of interest is clicked) -->
+  <aside class="narrative-drawer" id="narrativeDrawer" aria-label="Element Details">
     <div class="drawer-top">
-      <button class="btn-close" id="closeDrawerBtn" title="Close Panel">✕</button>
+      <button class="btn-close" id="closeDrawerBtn" title="Close Panel" aria-label="Close Panel">✕</button>
     </div>
 
     <div class="drawer-scroll-body" id="drawerBody">
-      <!-- Populated via JavaScript -->
+      <!-- Populated via JavaScript when an element of interest is clicked -->
     </div>
 
     <div class="drawer-actions-row">
-      <button class="btn-action" id="drawerOverviewBtn">Overview</button>
       <button class="btn-action primary" id="drawerFocusBtn">Zoom to Location</button>
+      <button class="btn-action" id="drawerCloseActionBtn">Close</button>
     </div>
   </aside>
 
@@ -1336,7 +1399,8 @@
           sticky: true
         });
 
-        polyline.on('click', () => {
+        polyline.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
           showRiverDetail(river, polyline.getBounds().getCenter());
         });
       });
@@ -1435,12 +1499,10 @@
 
     function openDrawer() {
       narrativeDrawer.classList.add('open');
-      document.getElementById('openDrawerTab').style.display = 'none';
     }
 
     function closeDrawer() {
       narrativeDrawer.classList.remove('open');
-      document.getElementById('openDrawerTab').style.display = 'inline-flex';
     }
 
     function renderOverview() {
@@ -1760,18 +1822,69 @@
       map.flyTo(MAP_CENTER, MAP_ZOOM, { duration: 1.0 });
     });
 
-    // Drawer Buttons
-    document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
-    document.getElementById('openDrawerTab').addEventListener('click', openDrawer);
+    // Left Hamburger Menu Controls
+    const controlPanel = document.getElementById('controlPanel');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const closeMenuBtn = document.getElementById('closeMenuBtn');
 
-    document.getElementById('drawerOverviewBtn').addEventListener('click', () => {
-      renderOverview();
-      map.flyTo(MAP_CENTER, MAP_ZOOM, { duration: 1.0 });
-    });
+    function openMenu() {
+      controlPanel.classList.add('open');
+    }
+
+    function closeMenu() {
+      controlPanel.classList.remove('open');
+    }
+
+    function toggleMenu(e) {
+      if (e) e.stopPropagation();
+      if (controlPanel.classList.contains('open')) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
+    }
+
+    hamburgerBtn.addEventListener('click', toggleMenu);
+    closeMenuBtn.addEventListener('click', closeMenu);
+
+    // Detail Modal / Drawer Buttons
+    document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
+    const drawerCloseActionBtn = document.getElementById('drawerCloseActionBtn');
+    if (drawerCloseActionBtn) {
+      drawerCloseActionBtn.addEventListener('click', closeDrawer);
+    }
 
     document.getElementById('drawerFocusBtn').addEventListener('click', () => {
       if (currentFocusTarget) {
         map.flyTo(currentFocusTarget, 9, { duration: 1.0 });
+      }
+    });
+
+    // Clicking map background closes both slide-outs
+    map.on('click', () => {
+      closeMenu();
+      closeDrawer();
+    });
+
+    // Prevent map interaction bleed-through when clicking or scrolling inside overlay panels
+    [
+      document.getElementById('controlPanel'),
+      document.getElementById('narrativeDrawer'),
+      document.getElementById('timelinePanel'),
+      document.getElementById('hamburgerBtn')
+    ].forEach(el => {
+      if (el) {
+        L.DomEvent.disableClickPropagation(el);
+        L.DomEvent.disableScrollPropagation(el);
+      }
+    });
+
+    // Keyboard accessibility: Escape key closes all open panels
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeMenu();
+        closeDrawer();
+        aboutModal.classList.remove('open');
       }
     });
 
@@ -1799,8 +1912,8 @@
       renderCorridors();
       renderTreaties(currentSelectedYear);
       renderStoryPoints();
-      renderOverview();
-      openDrawer();
+      // Notice: The detail modal starts closed and only pops up when
+      // an element of interest on the map is clicked by the user.
     }
 
     window.addEventListener('DOMContentLoaded', init);
